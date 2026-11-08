@@ -1,0 +1,315 @@
+{
+  "name": "Feedback Sentiment Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Customer Feedback",
+        "formDescription": "Tell us about your experience.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Feedback",
+              "placeholder": "Write your feedback here"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "06e030fb-4a91-5525-b8a0-dba9fd3d1ea4",
+      "name": "Feedback Form"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.Feedback }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=you are highly intelligent and accurate sentiment analyzer.\nAnalyze the sentiment of the  provided text.\nCategorize it into one of the following: \n[Positive, Negative, Neutral]. Use the provided formatting instructions."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        288,
+        -96
+      ],
+      "id": "502860a0-9099-56ff-a41a-ae12d3d4bbc2",
+      "name": "Classify Sentiment"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"sentiment\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"Positive\",\n        \"Negative\",\n        \"Neutral\"\n      ],\n      \"description\": \"Sentiment of the feedback. Must be exactly one of: Positive, Negative, Neutral\"\n    }\n  },\n  \"required\": [\n    \"sentiment\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        464,
+        144
+      ],
+      "id": "e32de381-9527-5c9a-b38e-ba070693dac2",
+      "name": "Sentiment Output Schema"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "id"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        144
+      ],
+      "id": "076b4fc3-2a52-509b-b292-29ab0d1f7315",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "52744e45-0fd1-5db4-b193-14a3e2dd82e0",
+                    "leftValue": "={{ $json.output.sentiment }}",
+                    "rightValue": "Negative",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Negative"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a5fe3540-4543-5110-9bc9-11be5987fc59",
+                    "leftValue": "={{ $json.output.sentiment }}",
+                    "rightValue": "Positive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Positive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "adb41f92-970e-5757-af46-2cce7a41796b",
+                    "leftValue": "={{ $json.output.sentiment }}",
+                    "rightValue": "Neutral",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Neutral"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        -96
+      ],
+      "id": "17f76fe7-1410-5e8d-8278-c316129b1bf5",
+      "name": "Route by Sentiment"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=we have got a Negative review, we need to solve this problem as fast as we can, because the customer said: {{ $('Feedback Form').item.json.Feedback }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        -256
+      ],
+      "id": "996792ed-2166-52ef-ba06-cbd11b747a8e",
+      "name": "Notify: Negative"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=we have got a Positive review, we are doing great as the customer said: {{ $('Feedback Form').item.json.Feedback }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        -128
+      ],
+      "id": "e3294061-0b92-58bf-aeb6-fd844c7d3cb6",
+      "name": "Notify: Positive"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=we have got a Neutral review, we are doing good and they got the expected service as the customer said: {{ $('Feedback Form').item.json.Feedback }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "7b7b5df4-c6cc-51b7-bb0a-019c4da0f382",
+      "name": "Notify: Neutral"
+    },
+    {
+      "parameters": {
+        "content": "## Feedback sentiment analysis\nA web form collects feedback. An LLM classifies it as Positive, Negative or Neutral and the matching alert is sent to Telegram.\n\n**Before running**\n- Replace `YOUR_TELEGRAM_CHAT_ID` in the three notify nodes\n- Connect Telegram and OpenAI credentials (any OpenAI-compatible provider works)\n- If your provider only supports chat completions, keep **Use Responses API** switched off in the model node\n\nThe output schema forces the model to return exactly `Positive`, `Negative` or `Neutral`, so the Switch node always has a value to match.",
+        "height": 230,
+        "width": 620,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -330
+      ],
+      "id": "84a639d5-ec2e-5864-bce7-706cef3fc9dd",
+      "name": "Setup Note"
+    }
+  ],
+  "connections": {
+    "Feedback Form": {
+      "main": [
+        [
+          {
+            "node": "Classify Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Output Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classify Sentiment",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Sentiment",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Route by Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Notify: Negative",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: Positive",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify: Neutral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
